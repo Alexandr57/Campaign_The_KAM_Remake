@@ -1,0 +1,72 @@
+Var 
+	PurpMaxUnitPl0, PurpUnitPl0:Integer;
+	TextPurp:Array[1..2] of AnsiString;
+	ColorPurp:Array[1..2] of AnsiString;
+	DieColorPurp:AnsiString;
+	VictoryTimeDelay:integer;
+	EnabledVictoryTimeDelay:Boolean;
+	DieTimeDelay:integer;
+	EnabledDieTimeDelay:Boolean;
+procedure OnMissionStart;
+begin
+	TextPurp[1] := '<$5>';
+	ColorPurp[1] := '[$00FFFF]';
+	TextPurp[2] := '<$5>';
+	ColorPurp[2] := '[$00FFFF]';
+	PurpMaxUnitPl0 := 30;
+	VictoryTimeDelay := 30;
+	EnabledVictoryTimeDelay := false;
+	DieTimeDelay := 30;
+	EnabledDieTimeDelay := false;
+	PurpUnitPl0 := States.StatArmyCount(0);
+end;
+
+procedure OnUnitDied(aUnit: Integer; aKillerOwner: Integer);
+begin
+	if States.StatArmyCount(2) <= 0 then begin
+		TextPurp[1] := '<$6>';
+		ColorPurp[1] := '[$00E000]';
+	end;
+	if States.StatArmyCount(3) <= 0 then begin
+		TextPurp[2] := '<$6>';
+		ColorPurp[2] := '[$00E000]';
+	end;
+		
+	if (States.StatArmyCount(2) <= 0)and(States.StatArmyCount(3) <= 0) then
+		EnabledVictoryTimeDelay := true;
+		
+	if States.UnitOwner(aUnit) = 0 then begin
+		PurpUnitPl0 := States.StatArmyCount(0);
+		if PurpUnitPl0 < PurpMaxUnitPl0 then
+			EnabledDieTimeDelay := true;
+	end;
+		
+end;
+
+Procedure OnTick;
+begin
+	if EnabledVictoryTimeDelay then
+		if VictoryTimeDelay > 0 then
+			dec(VictoryTimeDelay)
+		else
+		begin
+			VictoryTimeDelay := 30;
+			EnabledVictoryTimeDelay := false;
+			Actions.PlayerWin([0], true);
+		end;
+	if EnabledDieTimeDelay then
+		if DieTimeDelay > 0 then
+			dec(DieTimeDelay)
+		else
+		begin
+			DieTimeDelay := 30;
+			EnabledDieTimeDelay := false;
+			Actions.PlayerWin([2, 3, 4], true);
+		end;
+	
+	if States.GameTime = 20 then
+		Actions.ShowMsgFormatted(0, '<$0>', [PurpMaxUnitPl0]);
+	Actions.OverlayTextSetFormatted(0, '<$1><$2><$3><$4>', 
+		[DieColorPurp, PurpUnitPl0, PurpMaxUnitPl0, ColorPurp[1]+TextPurp[1], ColorPurp[2]+TextPurp[2]]);
+	
+end;
