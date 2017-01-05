@@ -1,5 +1,5 @@
 0:So. According to our data, our last obstacle to the city and the kingdom was attacked. Your rasparyazhenii squad. Your task is to free the village from one of the enemy army and raschistet obstacle to the cave. In this case you should be more than% d soldiers.
-1:Army: %s%d/%d[$ffffff]|
+1:Army: %s%d[$ffffff]/%s%d[$ffffff]|
 2:Objectives:|
 3:Release the village: [%s[$ffffff]]|
 4:Clear the way to the cave: [%s[$ffffff]]

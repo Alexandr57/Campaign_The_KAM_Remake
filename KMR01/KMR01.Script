@@ -35,10 +35,15 @@ begin
 	if (States.StatArmyCount(2) <= 0)and(States.StatArmyCount(3) <= 0) then
 		EnabledVictoryTimeDelay := true;
 		
-	if States.UnitOwner(aUnit) = 0 then begin
+	if States.UnitOwner(aUnit) = 0 then 
+	begin
 		PurpUnitPl0 := States.StatArmyCount(0);
 		if PurpUnitPl0 < PurpMaxUnitPl0 then
+		begin
+			DieColorPurp := '[$0000FF]';
 			EnabledDieTimeDelay := true;
+			
+		end;
 	end;
 		
 end;
@@ -67,6 +72,6 @@ begin
 	if States.GameTime = 20 then
 		Actions.ShowMsgFormatted(0, '<$0>', [PurpMaxUnitPl0]);
 	Actions.OverlayTextSetFormatted(0, '<$1><$2><$3><$4>', 
-		[DieColorPurp, PurpUnitPl0, PurpMaxUnitPl0, ColorPurp[1]+TextPurp[1], ColorPurp[2]+TextPurp[2]]);
+		[DieColorPurp, PurpUnitPl0, DieColorPurp, PurpMaxUnitPl0, ColorPurp[1]+TextPurp[1], ColorPurp[2]+TextPurp[2]]);
 	
 end;
