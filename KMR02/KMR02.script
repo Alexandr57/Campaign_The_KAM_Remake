@@ -1,0 +1,92 @@
+Const MaxDamageHouses = 8;
+Var
+	IDHouseSklad, IDHouseKazarma, DamageHouses:Integer;
+	TextPurp:AnsiString;
+	ColorPurp:AnsiString;
+	DieTextPurp: Array[0..2] of AnsiString;
+	DieColorPurp: Array[0..2] of AnsiString;
+	VictoryTimeDelay:integer;
+	EnabledVictoryTimeDelay:Boolean;
+	DieTimeDelay:integer;
+	EnabledDieTimeDelay:Boolean;
+procedure OnMissionStart;
+begin
+	TextPurp :='<$5>';
+	ColorPurp := '[$00FFFF]';
+	//DieTextPurp[0] :='<$6>';
+	DieColorPurp[0] :='[$00FFFF]';
+	DieTextPurp[1] :='<$6>';
+	DieColorPurp[1] :='[$00FFFF]';
+	DieTextPurp[2] :='<$6>';
+	DieColorPurp[2] :='[$00FFFF]';
+	IDHouseSklad := States.HouseAt(63, 70);
+	IDHouseKazarma := States.HouseAt(67, 68);
+	DamageHouses := 0;
+	VictoryTimeDelay := 30;
+	EnabledVictoryTimeDelay := false;
+	DieTimeDelay := 30;
+	EnabledDieTimeDelay := false;
+end;
+
+procedure OnHouseDestroyed(aHouse: Integer; aDestroyerIndex: Integer);
+begin
+	if aHouse = IDHouseSklad then
+	begin
+		DieTextPurp[1] := '<$7>';
+		DieColorPurp[1] := '[$0000FF]';
+		EnabledDieTimeDelay := true;
+	end;
+	if aHouse = IDHouseKazarma then
+	begin
+		DieTextPurp[2] := '<$7>';
+		DieColorPurp[2] := '[$0000FF]';
+		EnabledDieTimeDelay := true;
+	end;
+	if States.HouseOwner(aHouse) = 0 then
+	begin
+		inc(DamageHouses);
+		if DamageHouses >= MaxDamageHouses then
+		begin
+			DieColorPurp[0] := '[$0000FF]';
+			EnabledDieTimeDelay := true;
+		end;
+	end;
+end;
+
+procedure OnUnitDied(aUnit: Integer; aKillerOwner: Integer);
+begin
+	if States.StatArmyCount(1)+States.StatArmyCount(3) <= 0 then begin
+		TextPurp := '<$6>';
+		ColorPurp := '[$00E000]';
+		EnabledVictoryTimeDelay := true;
+	end;	
+end;
+
+procedure OnTick;
+begin
+	if States.GameTime = 20 then
+		Actions.ShowMsg(0, '<$8>');
+	if EnabledVictoryTimeDelay then
+		if VictoryTimeDelay > 0 then
+			dec(VictoryTimeDelay)
+		else
+		begin
+			VictoryTimeDelay := 30;
+			EnabledVictoryTimeDelay := false;
+			Actions.PlayerWin([0], true);
+		end;
+	if EnabledDieTimeDelay then
+		if DieTimeDelay > 0 then
+			dec(DieTimeDelay)
+		else
+		begin
+			DieTimeDelay := 30;
+			EnabledDieTimeDelay := false;
+			Actions.PlayerWin([1, 3], true);
+		end;
+	
+	Actions.OverlayTextSetFormatted(0, '<$0><$1><$2><$3><$4>', 
+		[DieColorPurp[0], DamageHouses, DieColorPurp[0], MaxDamageHouses, DieColorPurp[1]+DieTextPurp[1], DieColorPurp[2]+DieTextPurp[2], 
+		ColorPurp+TextPurp]);
+	
+end;
