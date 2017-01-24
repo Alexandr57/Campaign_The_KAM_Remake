@@ -200,7 +200,7 @@ begin
 	begin
 		if (Goals[I].Status = gsDone) and (Goals[I].Delayed) then
 		begin
-			if (States.GameTime - DelayedStatusTime) = (DelayDFSec * TickToSec) then
+			if (States.GameTime - DelayedStatusTime) >= (DelayDFSec * TickToSec) then
 			begin
 				inc(GoalNumber);
 				case I of
@@ -232,7 +232,7 @@ begin
 			end;
 
 			if (Goals[I].Status = gsFail) and (Goals[I].Delayed) then
-				if (States.GameTime - DelayedStatusTime) = (DelayDFSec * TickToSec) then
+				if (States.GameTime - DelayedStatusTime) >= (DelayDFSec * TickToSec) then
 				begin
 					case I of
 						0,3:	UpdateGoal(I, gsFail, false, true, false);
