@@ -1,0 +1,260 @@
+type TKMRGoalStatus = (gsNotAvailable, gsAvailable, gsDone, gsFail);
+type	TKMRGoal = record
+		Status: TKMRGoalStatus;
+		Delayed: Boolean;
+		IsTextVisible: Boolean;
+		IsCheckVisible: Boolean;
+		Text, CheckText, Color: AnsiString;
+		Value, MaxValue: Integer;
+	end;
+const
+	//Скобки для отображение статуса
+	CharStatTextStatus = '%s%d[$FFFFFF] <$1> %s%d';
+	CharCheckTextStatus = '[$FFFFFF][%s[$FFFFFF]]';
+	//Текст статуса
+	//Задать цвет текста статуса задания в шестнадцетеричноv bgr коде цвета.
+	//Цвет можно получить в моей собственной программе - https://1drv.ms/u/s!AoTVnH6oeuiHgY9a3Wv3MbZ3dcAZzw
+	//Программа вернет уже готовый код цвета в буфер обмена
+	//Задержка перед следующим заданием, победой или поражением
+	DelayDFSec = 3;
+	//Сколько тиков состовляет 1 секунда
+	TickToSec = 10;
+	//Количество заданий
+	GoalsCount = 5;
+	
+	MaxHouseBuildPurp2 = 7;
+	MaxArmyPurp3 = 25;
+	AddTreeTrunk = 9; 
+	AddFish = 17;
+var
+	GoalTxt: array[0..3] of AnsiString;		//Текст статуса
+	GoalColor: array[0..3] of AnsiString;	//Цвет статуса
+	Goals: array of TKMRGoal;
+	GoalNumber: Integer;
+	DelayedStatusTime: Integer;
+	IDHouseDamagePurp4: Integer;
+	IDHousesLagerEnemyPurp5: array[0..3] of Integer;
+	HousesPl3HousesCount: Integer;
+	
+	
+procedure UpdateGoal(aNum: Integer; aStatus: TKMRGoalStatus; aIsTextVisible: Boolean; aIsCheckVisible: Boolean; aDelayed: Boolean);
+begin
+	Goals[aNum].Status := aStatus;
+	Goals[aNum].IsTextVisible := aIsTextVisible;
+	Goals[aNum].IsCheckVisible := aIsCheckVisible;
+	Goals[aNum].Delayed := aDelayed;
+	if aStatus = gsNotAvailable then
+		Goals[aNum].Text:=''
+	else
+		Goals[aNum].Text := '<$' + IntToStr(aNum + 2) + '>';
+	
+	if Goals[aNum].IsTextVisible then
+		Goals[aNum].Text := Goals[aNum].Text + ' ' + CharStatTextStatus;
+		
+	if Goals[aNum].IsCheckVisible then
+		Goals[aNum].Text := Goals[aNum].Text + ' ' + CharCheckTextStatus;
+		
+	Goals[aNum].CheckText := GoalTxt[Ord(aStatus)];
+	Goals[aNum].Color := GoalColor[Ord(aStatus)];
+	
+	if aDelayed then
+		DelayedStatusTime := States.GameTime;
+end;
+
+
+procedure InitVariables;
+var I: Integer;
+begin
+	//Текст статуса
+	GoalTxt[0] := '';
+	GoalTxt[1] := '-';
+	GoalTxt[2] := '+';
+	GoalTxt[3] := 'x';
+	//Задать цвет текста статуса задания в шестнадцетеричноv bgr коде цвета.
+	//Цвет можно получить в моей собственной программе - https://1drv.ms/u/s!AoTVnH6oeuiHgY9a3Wv3MbZ3dcAZzw
+	//Программа вернет уже готовый код цвета в буфер обмена
+	GoalColor[0] := '';
+	GoalColor[1] := '[$00FFFF]';
+	GoalColor[2] := '[$00E000]';
+	GoalColor[3] := '[$0000FF]';
+	
+	SetLength(Goals, GoalsCount);
+	UpdateGoal(0, gsAvailable, true, true, false);
+	GoalNumber := 0;
+	for I := 1 to GoalsCount - 1 do
+		UpdateGoal(I, gsNotAvailable, false, false, false);
+	
+end;
+	
+	
+procedure OnMissionStart;
+begin
+	InitVariables;	
+	
+	Goals[0].MaxValue := States.StatArmyCount(3) + States.StatArmyCount(4);
+	Goals[1].MaxValue := MaxHouseBuildPurp2;
+	Goals[2].MaxValue := MaxArmyPurp3;
+	Goals[4].MaxValue := 2;
+	Goals[0].Value := 0;
+	Goals[1].Value := 0;
+	Goals[2].Value := 0;
+	Goals[4].Value := 0;
+	
+	IDHouseDamagePurp4 := States.HouseAt(44, 29);
+	IDHousesLagerEnemyPurp5[0] := States.HouseAt(20, 6);
+	IDHousesLagerEnemyPurp5[1] := States.HouseAt(83, 22);
+	IDHousesLagerEnemyPurp5[2] := States.HouseAt(89, 27);
+	HousesPl3HousesCount := 0;
+	//Actions.ShowMsg(0, 'IDHousesLagerEnemyPurp5[0] = '+IntToStr(IDHousesLagerEnemyPurp5[0])+'|IDHousesLagerEnemyPurp5[1] = '+IntToStr(IDHousesLagerEnemyPurp5[1])+'|IDHousesLagerEnemyPurp5[2] = '+IntToStr(IDHousesLagerEnemyPurp5[2])+'|Goals[0].MaxValue = '+ IntToStr(Goals[0].MaxValue)+'|Goals[1].MaxValue = '+IntToStr(Goals[1].MaxValue)+'|Goals[2].MaxValue = '+IntToStr(Goals[2].MaxValue)+'|Goals[4].MaxValue = '+IntToStr(Goals[4].MaxValue));
+end;
+
+
+procedure OnUnitDied(aUnit: Integer; aKillerOwner: Integer);
+begin
+	if (States.StatArmyCount(0) <= 0) then
+		case GoalNumber of
+			0..2,4: UpdateGoal(GoalNumber, gsFail, true, true, true);
+			3: 		UpdateGoal(GoalNumber, gsFail, false, true, true);
+		end;
+	if Goals[0].Status = gsAvailable then 
+	begin
+		if (States.UnitOwner(aUnit) = 3) or (States.UnitOwner(aUnit) = 4) then
+			inc(Goals[0].Value);
+		if States.StatArmyCount(3)+States.StatArmyCount(4) <= 0 then
+			UpdateGoal(0, gsDone, true, true, true);
+	end;
+end;
+
+
+procedure OnHouseBuilt(aHouse: Integer);
+begin
+	if Goals[1].Status = gsAvailable then 
+	begin
+		if States.HouseOwner(aHouse) = 0 then
+		begin
+			inc(Goals[1].Value);
+			if Goals[1].Value = Goals[1].MaxValue then
+				UpdateGoal(1, gsDone, true, true, true);
+		end;
+	end;
+end;
+
+
+procedure OnWarriorEquipped(aUnit: Integer; aGroup: Integer);
+begin
+	if Goals[2].Status = gsAvailable then 
+	begin
+		if States.UnitOwner(aUnit) = 0 then
+			if States.UnitType(aUnit) >= 14 then
+			begin
+				inc(Goals[2].Value);
+				if Goals[2].Value = Goals[2].MaxValue then
+					UpdateGoal(2, gsDone, true, true, true);
+			end;
+	end;
+end;
+
+
+procedure OnHouseDestroyed(aHouse: Integer; aDestroyerIndex: Integer);
+begin
+	if (aHouse = States.HouseAt(63, 70)) or (aHouse = States.HouseAt(67, 68)) then
+		case GoalNumber of
+			0..2,4:	UpdateGoal(GoalNumber, gsFail, true, true, true);
+			3:		UpdateGoal(GoalNumber, gsFail, false, true, true);
+		end;
+	
+	if Goals[3].Status = gsAvailable then
+		if aHouse = IDHouseDamagePurp4 then 
+		begin
+			UpdateGoal(3, gsDone, false, true, true);
+			Actions.HouseAddWaresTo(States.HouseAt(63, 70), 0, AddTreeTrunk);
+			Actions.HouseAddWaresTo(States.HouseAt(63, 70), 27, AddFish);
+			Actions.ShowMsgFormatted(0, '<$11>', [AddTreeTrunk, AddFish]);
+		end;
+		
+	if Goals[4].Status = gsAvailable then 
+	begin
+		if (States.HouseOwner(aHouse) = 1)or(States.HouseOwner(aHouse) = 2) then
+		begin
+			if aHouse = IDHousesLagerEnemyPurp5[0] then
+				inc(Goals[4].Value);
+			if aHouse = IDHousesLagerEnemyPurp5[1] then
+				inc(HousesPl3HousesCount);
+			if aHouse = IDHousesLagerEnemyPurp5[2] then
+				inc(HousesPl3HousesCount);
+			if HousesPl3HousesCount = 2 then
+				inc(Goals[4].Value);
+			if Goals[4].Value = Goals[4].MaxValue then
+				UpdateGoal(4, gsDone, true, true, true);
+			//Actions.ShowMsg(0, 'HousesPl3HousesCount = '+IntToStr(HousesPl3HousesCount));
+		end;
+	end;
+end;
+
+
+procedure OnTick;
+var Goal: TKMRGoal;
+	I: Integer;
+begin
+	for I := 0 to GoalsCount - 1 do
+	begin
+		if (Goals[I].Status = gsDone) and (Goals[I].Delayed) then
+		begin
+			if (States.GameTime - DelayedStatusTime) >= (DelayDFSec * TickToSec) then
+			begin
+				inc(GoalNumber);
+				case I of
+					0:	begin
+							Actions.ShowMsgFormatted(0, '<$7>', [Goals[I+1].MaxValue]);
+							UpdateGoal(I, gsDone, true, true, false);
+							UpdateGoal(I+1, gsAvailable, true, true, false);
+						end;
+					1:	begin
+							Actions.ShowMsgFormatted(0, '<$8>', [Goals[I+1].MaxValue]);
+							UpdateGoal(I, gsDone, true, true, false);
+							UpdateGoal(I+1, gsAvailable, true, true, false);
+						end;
+					2:	begin
+							Actions.ShowMsgGoto(0, 44, 28, '<$9>');
+							UpdateGoal(I, gsDone, true, true, false);
+							UpdateGoal(I+1, gsAvailable, false, true, false);
+						end;
+					3:	begin
+							Actions.ShowMsgFormatted(0, '<$10>', [Goals[2].MaxValue]);
+							UpdateGoal(I, gsDone, false, true, false);
+							UpdateGoal(I+1, gsAvailable, true, true, false);
+						end;
+					4:	begin
+							UpdateGoal(I, gsDone, true, true, false);
+							Actions.PlayerWin([0], true);
+						end;
+				end;
+			end;
+
+			if (Goals[I].Status = gsFail) and (Goals[I].Delayed) then
+				if (States.GameTime - DelayedStatusTime) >= (DelayDFSec * TickToSec) then
+				begin
+					case I of
+						0,3:	UpdateGoal(I, gsFail, false, true, false);
+						1..2,4:	UpdateGoal(I, gsFail, true, true, false);
+					end;
+					Actions.PlayerDefeat(0);			
+				end;
+		end;
+
+	end;	
+	
+	Goal := Goals[GoalNumber];
+	if Goal.Status <> gsNotAvailable then
+		if Goal.IsTextVisible and Goal.IsCheckVisible then
+			Actions.OverlayTextSetFormatted(0, '<$0>' + Goal.Text, [Goal.Color, Goal.Value, Goal.Color, Goal.MaxValue, Goal.Color + Goal.CheckText])
+		else 
+		if not Goal.IsTextVisible and Goal.IsCheckVisible then
+			Actions.OverlayTextSetFormatted(0, '<$0>' + Goal.Text, [Goal.Color + Goal.CheckText])
+		else
+		if Goal.IsTextVisible and not Goal.IsCheckVisible then
+			Actions.OverlayTextSetFormatted(0, '<$0>' + Goal.Text, [Goal.Color, Goal.Value, Goal.Color, Goal.MaxValue])
+		else 
+		if not Goal.IsTextVisible and not Goal.IsCheckVisible then
+			Actions.OverlayTextSet(0, '<$0>' + Goal.Text);
+end;
